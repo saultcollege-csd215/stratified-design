@@ -48,11 +48,13 @@ fun addItem(cart: List<CartItem>, item: CartItem) = cart + item
 fun setPriceByName(cart: List<CartItem>, name: String, price: Double): List<CartItem> {
     val item = getItemByName(cart, name)
 
-    return if ( item === null ) {
-        cart
-    } else {
-        updateItem(cart, item, setPrice(item, price))
+    if ( item === null ) {
+        return cart
     }
+
+    // Since we are updating a CartItem object inside the list, need to copy the CartItem to keep cart immutable
+    // (Copy-on-write)
+    return replaceListItem(cart, item, setPrice(item, price))
 }
 
 fun isInCart(cart: List<CartItem>, name: String): Boolean {
@@ -66,7 +68,7 @@ fun isInCart(cart: List<CartItem>, name: String): Boolean {
     return false
      */
 
-    // But after writing getItemBy name, we can recognize that lookup-by-name pattern again
+    // But after writing getItemByName, we can recognize that lookup-by-name pattern again
     // and reuse it to perform the necessary calculation here!
     return getItemByName(cart, name) !== null
 }
@@ -80,15 +82,6 @@ fun getItemByName(cart: List<CartItem>, name: String): CartItem? {
     return null
 }
 
-fun updateItem(cart: List<CartItem>, oldItem: CartItem, newItem: CartItem): List<CartItem> {
-    val copy = cart.toMutableList()
-    val i = copy.indexOf(oldItem)
-    copy[i] = newItem
-    return copy
-
-    // Or: return cart.toMutableList()[cart.indexOf(oldItem)] = newItem
-}
-
 
 /**
  * Basic item operations
@@ -97,3 +90,29 @@ fun updateItem(cart: List<CartItem>, oldItem: CartItem, newItem: CartItem): List
 fun setPrice(item: CartItem, price: Double): CartItem {
     return item.copy(price=price)
 }
+
+/**
+ * Generic list operations
+ */
+
+/* An implementation using loops */
+//fun <I> replaceListItem(list: List<I>, oldItem: I, newItem: I): List<I> {
+//    val copy = list.toMutableList()
+//    for ( i in copy.indices ) {
+//        if ( copy[i] == oldItem ) {   // This is STRUCTURAL comparison in Kotlin (like Java's .equals and Python's ==)
+//            copy[i] = newItem
+//            break                     // If we get here we're done looping
+//        }
+//    }
+//    return copy
+//}
+
+fun <I> replaceListItem(list: List<I>, oldItem: I, newItem: I) =
+    when (val i = list.indexOf(oldItem)) {
+        // -1 means the oldItem was not found and the list remains unchanged
+        -1 -> list
+
+        // Copy-on-write because we are updating one of the list's elements; need to keep list immutable
+        else -> list.slice(0 until i) + newItem + list.slice(i until list.size)
+    }
+

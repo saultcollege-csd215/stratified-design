@@ -37,7 +37,7 @@ fun calcTax(total: Double) = total * 0.13
  *      of data in this layer, such as the cart, changes completely
  */
 
-// typealias Cart = List<String, CartItem>   // LIST implementation
+// typealias Cart = List<CartItem>   // LIST implementation
 typealias Cart = Map<String, CartItem>  // MAP implementation
 
 fun calcTotal(cart: Cart): Double {
@@ -72,8 +72,8 @@ fun setPriceByName(cart: Cart, name: String, price: Double): Cart {
     return if ( item === null ) {
         cart
     } else {
-        // updateItem(cart, item, setPrice(item, price))  // LIST implementation
-        updateItem(cart, name, setPrice(item, price)) // MAP implementation
+        // replaceListItem(cart, item, setPrice(item, price))  // LIST implementation
+        replaceMapItem(cart, name, setPrice(item, price)) // MAP implementation
     }
 }
 
@@ -93,18 +93,6 @@ fun getItemByName(cart: Cart, name: String): CartItem? {
     return cart[name] // MAP implementation
 }
 
-/* LIST implementation */
-//fun updateItem(cart: Cart, oldItem: CartItem, newItem: CartItem): Cart {
-//    val copy = cart.toMutableList()
-//    val i = copy.indexOf(oldItem)
-//    copy[i] = newItem
-//    return copy
-//}
-
-/* MAP implementation */
-fun updateItem(cart: Cart, name: String, newItem: CartItem) = cart + mapOf(name to newItem)
-
-
 /**
  * Basic item operations
  */
@@ -112,3 +100,18 @@ fun updateItem(cart: Cart, name: String, newItem: CartItem) = cart + mapOf(name 
 fun setPrice(item: CartItem, price: Double): CartItem {
     return item.copy(price=price)
 }
+
+/**
+ * Generic collection operations
+ */
+
+fun <I> replaceListItem(list: List<I>, oldItem: I, newItem: I) =
+    when (val i = list.indexOf(oldItem)) {
+        // -1 means the oldItem was not found and the list remains unchanged
+        -1 -> list
+
+        // Copy-on-write because we are updating one of the list's elements; need to keep list immutable
+        else -> list.slice(0 until i) + newItem + list.slice(i until list.size)
+    }
+
+fun <K,V> replaceMapItem(map: Map<K,V>, key: K, newValue: V) = map + mapOf(key to newValue)
